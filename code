@@ -1,0 +1,182 @@
+from pygame import *
+from random import *
+mixer.init()
+
+class GameSprite(sprite.Sprite):
+    def __init__(self, player_image, player_x, player_y, player_speed, size_x, size_y):
+        sprite.Sprite.__init__(self)
+        self.image = transform.scale(image.load(player_image), (size_x, size_y))
+        self.speed = player_speed
+        self.rect = self.image.get_rect()
+        self.rect.x = player_x
+        self.rect.y = player_y
+    
+    def reset(self):
+        window.blit(self.image, (self.rect.x, self.rect.y))
+
+class Player(GameSprite):
+    def update(self):  
+        keys_pressed = key.get_pressed()
+        if keys_pressed[K_a] and self.rect.x > 5:
+            self.rect.x -= self.speed
+        if keys_pressed[K_d] and self.rect.x < 620:
+            self.rect.x += self.speed
+        if keys_pressed[K_w] and self.rect.y >= 5:
+            self.rect.y -= self.speed
+        if keys_pressed[K_s] and self.rect.y <= 435:
+            self.rect.y += self.speed
+    def fire(self):
+        pass
+
+class Enemy(GameSprite):
+    def __init__(self, player_image, player_x, player_y, player_speed, size_x, size_y, deriction, number):
+        GameSprite.__init__(self, player_image, player_x, player_y, player_speed, size_x, size_y)
+        self.deriction = deriction
+        self.number = self.rect.x
+    def update(self):
+        global lost
+        if self.rect.y < 500:
+            self.rect.y += self.speed
+        if self.rect.y >= 500:
+            self.rect.y = -50
+            self.speed = randint(1, 4)
+            self.rect.x = randint(50, 650)
+            lost += 1
+            self.deriction = "right"
+
+        if self.rect.x <= self.number:
+            self.deriction = "right"
+        if self.rect.x >= self.number + 50:
+            self.deriction = "left"
+        if self.deriction == "left":
+            self.rect.x -= self.speed
+            self.number += self.speed
+        else:
+            self.rect.x += self.speed
+            self.number -= self.speed
+               
+class Ammo(GameSprite):
+    def update(self):
+        if self.rect.y > 0:
+            self.rect.y -= self.speed
+        if self.rect.y <= 0:
+            self.kill()
+
+class Obstacles(GameSprite):
+    def update(self):
+        if self.rect.x > -50:
+            self.rect.x -= self.speed
+        if self.rect.x <= -50:
+            self.rect.x = 700
+            self.speed = randint(1, 4)
+            self.rect.y = randint(65, 435)
+
+win_width = 700
+win_height = 500
+window = display.set_mode((win_width, win_height))
+display.set_caption("shoter")
+
+background = transform.scale(image.load("galaxy.jpg"), (win_width, win_height))
+rocket = Player("rocket.png", 5, win_height - 80, 5, 55, 65)
+ufos = sprite.Group()
+for i in range(1, 6):
+    ufos.add(Enemy("ufo.png", randint(50, 650), -50, randint(1, 4), 80, 50, "right", 0))
+asteroids = sprite.Group()
+for n in range(1, 4):
+    asteroids.add(Obstacles("asteroid.png", 700, randint(65, 435), randint(1, 4), 50, 50))
+bullet = sprite.Group()
+
+mixer.music.load("space.ogg")
+mixer.music.play()
+fire = mixer.Sound("fire.ogg")
+
+font.init()
+font2 = font.SysFont('Arial', 30)
+a = 0
+score = 0
+lost = 0
+goal = 3
+max_lost = 10
+life = 3
+lose = font2.render("YOU LOSE!", True, (180, 0, 0))
+win = font2.render("YOU WIN!", True, (255, 215, 0))
+start_time = time.get_ticks()
+time_duration = 750
+game = True
+finish = False
+while game:
+    for e in event.get():
+        current_time = time.get_ticks()  
+        if e.type == QUIT:
+            game = False
+        elif e.type == KEYDOWN:
+            if e.key == K_SPACE and current_time - start_time >= time_duration:
+                bullet.add(Ammo("bullet.png", rocket.rect.x + 15, rocket.rect.y - 50, 5, 25, 25))
+                fire.play()
+                start_time = time.get_ticks()    
+            if e.key== K_r:
+                finish = False
+                score = 0
+                lost = 0
+                life = 3
+                rocket = Player("rocket.png", 5, win_height - 80, 5, 55, 65)
+                ufos.empty()
+                bullet.empty()
+                asteroids.empty()
+                for i in range(1, 6):
+                    ufos.add(Enemy("ufo.png", randint(50, 650), -50, randint(1, 4), 80, 50, "right", 0))
+                for n in range(1, 4):
+                    asteroids.add(Obstacles("asteroid.png", 700, randint(65, 435), randint(1, 4), 50, 50))
+
+                
+
+    if finish == False:
+        window.blit(background, (0, 0))
+        rocket.reset()
+        ufos.draw(window)
+        bullet.draw(window)
+        asteroids.draw(window)
+    
+        rocket.update()
+        ufos.update()
+        bullet.update()
+        asteroids.update()
+
+        text = font2.render("Счет:" + str(score), 1, (255, 255, 255))
+        window.blit(text, (10, 20))
+        text_lose = font2.render("Пропущено:" + str(lost), 1, (255, 255, 255))
+        window.blit(text_lose, (10, 50))
+        text_life = font2.render("Жизни:"+ str(life),  1, (255, 255, 255))
+        window.blit(text_life, (10, 80))
+
+        collides = sprite.groupcollide(ufos, bullet, True, True)
+        collides_1 = sprite.groupcollide(ufos, asteroids, True, True)
+        collides_2 = sprite.groupcollide(bullet, asteroids, True, False)
+        for c in collides:
+            score = score + 1
+            ufo = Enemy("ufo.png", randint(50, 650), -50, randint(1, 4), 80, 50, "right", 0)
+            ufos.add(ufo)
+        for d in collides_1:
+            asteroid = Obstacles("asteroid.png", 700, randint(65, 435), randint(1, 4), 50, 50)
+            asteroids.add(asteroid)
+            ufo = Enemy("ufo.png", randint(50, 650), -50, randint(1, 4), 80, 50, "right", 0)
+            ufos.add(ufo)
+        for s in collides_2:
+            a = 0
+        if sprite.spritecollide(rocket, ufos, True):
+            life -= 1
+            ufo = Enemy("ufo.png", randint(50, 650), -50, randint(1, 4), 80, 50, "right", 0)
+            ufos.add(ufo)
+        elif sprite.spritecollide(rocket, asteroids, True):
+            life -= 1
+            asteroid = Obstacles("asteroid.png", 700, randint(65, 435), randint(1, 4), 50, 50)
+            asteroids.add(asteroid)
+        elif lost >= max_lost or life == 0:
+            finish = True
+            window.blit(lose, (200, 200))
+        elif score >= goal:
+            finish = True
+            window.blit(win, (200, 200))
+
+        display.update()
+    time.delay(50)
