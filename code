@@ -31,30 +31,39 @@ class Player_2(GameSprite):
             self.rect.y += self.speed
 
 class Ball(GameSprite):
-    def __init__(self, player_image, player_x, player_y, player_speed, size_x, size_y, deriction, number):
+    def __init__(self, player_image, player_x, player_y, player_speed, size_x, size_y, deriction, number, turbo):
         GameSprite.__init__(self, player_image, player_x, player_y, player_speed, size_x, size_y)
         self.deriction = deriction
         self.number = number
+        self.turbo = turbo
     def update(self):
         if self.deriction == 'right':
             self.rect.x += self.speed
         if self.deriction == "left":
             self.rect.x -= self.speed
 
-        if self.rect.y == 50:
+        if self.rect.y <= 50:
             self.number = 0
-        if self.rect.y == 470:
-            self.number = 1  
+            self.turbo += 1
+        if self.rect.y >= 470:
+            self.number = 1
+            self.turbo += 1  
         
         if self.number == 0:
             self.rect.y += self.speed
         if self.number == 1:
             self.rect.y -= self.speed
+
+        if self.turbo == 5:
+            self.speed += 1
+            self.turbo = 0
         
     def revers_1(self):
         self.deriction = 'right'
+        self.turbo += 1
     def revers_2(self):
         self.deriction = "left"
+        self.turbo += 1
     
     def wall_1(self):
         if self.rect.x <= 0:
@@ -78,7 +87,9 @@ if number_x == 1:
 background = transform.scale(image.load("table.png"), (win_width, win_height))
 racket_1 = Player_1("ping-pong-racket_1.png", 10, win_height - 100, 50, 100, 100)
 racket_2 = Player_2("ping-pong-racket_2.png", 590, win_height - 100, 50, 100, 100)
-ball = Ball('ball.png', 350, 250, 10, 25, 25, deriction_x, number_y)
+racket_1_finish = Player_1("ping-pong-racket_1.png", 325, 215, 50, 100, 100)
+racket_2_finish = Player_2("ping-pong-racket_2.png", 275, 215, 50, 100, 100)
+ball = Ball('ball.png', 350, 250, 10, 25, 25, deriction_x, number_y, 0)
 
 font.init()
 font2 = font.SysFont('Arial', 30)
@@ -86,8 +97,8 @@ font2 = font.SysFont('Arial', 30)
 
 score_1 = 0
 score_2 = 0    
-lose_1 = font2.render("YOU LOSE NUMBER 1!", True, (0, 0, 180))
-lose_2 = font2.render("YOU LOSE NUMBER 2!", True, (180, 0, 0))
+lose_1 = font2.render("YOU LOSE NUMBER 1!", True, (255, 255, 255))
+lose_2 = font2.render("YOU LOSE NUMBER 2!", True, (255, 255, 255))
 start_time = time.get_ticks()
 time_duration = 750
 game = True
@@ -111,19 +122,23 @@ while game:
         ball.update()
 
         text_1 = font2.render("Счет №1: " + str(score_1), 1, (255, 255, 255))
-        text_2 = text = font2.render(str(score_2) + " :Счет №2", 1, (255, 255, 255))
+        text_2 = font2.render(str(score_2) + " :Счет №2", 1, (255, 255, 255))
         window.blit(text_1, (0, 0))
         window.blit(text_2, (565, 0))
 
         if sprite.collide_rect(racket_1, ball):
             ball.revers_1()
         if sprite.collide_rect(racket_2, ball):
-            ball.revers_2()
+            ball.revers_2()  
         
         if ball.wall_1() == True:
             score_2 += 1
             if score_2 == 5:
                 finish = True
+                draw.rect(window, (200, 0, 0), (380, 225, 125, 60))
+                draw.rect(window, (0, 0, 200), (200, 225, 125, 60))
+                racket_1_finish.reset()
+                racket_2_finish.reset()
                 window.blit(lose_1, (220, 235))
             if score_2 < 5:
                 number_y = randint(0, 1)
@@ -132,13 +147,17 @@ while game:
                     deriction_x = 'right'
                 if number_x == 1:
                     deriction_x = 'left'
-                ball = Ball('ball.png', 350, 250, 10, 25, 25, deriction_x, number_y)
+                ball = Ball('ball.png', 350, 250, 10, 25, 25, deriction_x, number_y, 0)
                 ball.reset()
             
         if ball.wall_2() == True:
             score_1 += 1
             if score_1 == 5:
                 finish = True
+                draw.rect(window, (200, 0, 0), (380, 225, 125, 60))
+                draw.rect(window, (0, 0, 200), (200, 225, 125, 60))
+                racket_1_finish.reset()
+                racket_2_finish.reset()
                 window.blit(lose_2, (220, 235))
             if score_1 < 5:
                 number_y = randint(0, 1)
@@ -147,7 +166,7 @@ while game:
                     deriction_x = 'right'
                 if number_x == 1:
                     deriction_x = 'left'
-                ball = Ball('ball.png', 350, 250, 10, 25, 25, deriction_x, number_y)
+                ball = Ball('ball.png', 350, 250, 10, 25, 25, deriction_x, number_y, 0)
                 ball.reset()
 
         display.update()
